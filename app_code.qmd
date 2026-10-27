@@ -143,3 +143,185 @@ state_cat_summary |>
   filter(State %in% top_states$State) |>
   arrange(State, desc(total_quantity))
 ```
+
+## Contingency Tables
+### One-Way Contingency Table
+```{r}
+table(superstore$Category)
+
+table(superstore$`Sub-Category`)
+```
+
+### Two-Way Contingency Table
+```{r}
+table(superstore$Region, superstore$Category)
+```
+
+## Numerical Summaries by Product Category
+```{r}
+cat_num_sum <- superstore |>
+  group_by(Category, `Sub-Category`) |>
+  summarize(
+    mean_sales = mean(Sales),
+    median_sales = median(Sales),
+    sd_sales = sd(Sales),
+    
+    mean_quantity = mean(Quantity),
+    median_quantity = median(Quantity),
+    sd_quantity = sd(Quantity),
+    
+    mean_profit = mean(Profit),
+    median_profit = median(Profit),
+    sd_profit = sd(Profit),
+    
+    .groups = "drop"
+  )
+
+cat_num_sum
+
+```
+
+## Graphical Summaries
+
+### Bar Chart
+```{r}
+# Top 10 States by Total Sales (Q1)
+
+ggplot(top_states, aes(
+  x = reorder(State, total_sales),
+  y = total_sales
+)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Top 10 States by Total Sales",
+    x = "State",
+    y = "Total Sales ($)"
+  ) +
+  theme_bw()
+```
+
+### Side-By-Side Bar Chart
+```{r}
+# Sales by Product Category Across Top States (Q1 & Q2)
+
+state_cat_sales <- superstore |>
+  filter(State %in% top_states$State) |>
+  group_by(State, Category) |>
+  summarize(
+    total_sales = sum(Sales),
+    .groups = "drop"
+  )
+
+ggplot(
+  state_cat_sales,
+  aes(x = State, y = total_sales, fill = Category)
+) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(
+    title = "Sales by Product Category Across Top 10 States",
+    x = "State",
+    y = "Total Sales ($)",
+    fill = "Product Category"
+  ) +
+  theme_bw()
+```
+
+### Scatter Plot
+```{r}
+# Total Sales vs. Total Profit by State (Q3)
+
+ggplot(state_summary, aes(
+  x = total_sales,
+  y = total_profit,
+  color = total_profit
+)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Total Sales vs. Total Profit by State",
+    x = "Total Sales ($)",
+    y = "Total Profit ($)",
+    color = "Total Profit ($)"
+  ) +
+  theme_bw()
+```
+
+### Box Plot
+```{r}
+# Profit Ditribution by Product Category (Q3)
+
+ggplot(superstore, aes(
+  x = Category,
+  y = Profit,
+  fill = Category
+)) +
+  geom_boxplot() +
+  labs(
+    title = "Profit Distribution by Product Category",
+    x = "Product Category",
+    y = "Profit ($)",
+    fill = "Product Category"
+  ) +
+  theme_bw()
+```
+
+### Faceted Bar Chart
+```{r}
+# Quantity sold by sub-category across the top 10 states
+top_state_subcat_sales <- superstore |>
+  filter(State %in% top_states$State) |>
+  group_by(Category, `Sub-Category`) |>
+  summarize(
+    total_quantity = sum(Quantity),
+    .groups = "drop"
+  )
+
+# Plot quantity sold by product sub-category
+ggplot(
+  top_state_subcat_sales,
+  aes(
+    x = reorder(`Sub-Category`, total_quantity),
+    y = total_quantity,
+    fill = Category
+  )
+) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(~ Category, scales = "free_y") +
+  labs(
+    title = "Quantity Sold by Product Sub-Category Across the Top 10 States",
+    x = "Product Sub-Category",
+    y = "Total Quantity Sold"
+  ) +
+  theme_bw()
+```
+
+### Heatmap
+```{r}
+# Heatmap of Sales by State and Product Category (Q1 & Q2)
+
+ggplot(
+  state_cat_sales,
+  aes(
+    x = State,
+    y = Category,
+    fill = total_sales
+  )
+) +
+  geom_tile(color = "white") +
+  labs(
+    title = "Sales by State and Product Category",
+    x = "State",
+    y = "Product Category",
+    fill = "Total Sales ($)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
