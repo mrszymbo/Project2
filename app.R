@@ -93,8 +93,17 @@ ui <- page_sidebar(
     nav_panel(
       "Download Data",
       h3("Download the Data"),
-      p("The data table and download button will go here.")
-    ), 
+      p("This table will show data after your applied filters."),
+    
+    DT::dataTableOutput("data_table"),
+    
+    br(),
+    
+    downloadButton(
+      outputId = "download_data",
+      label = "Download the Filtered Data"
+    )
+  ),
     
     nav_panel(
       "Explore Data",
@@ -190,6 +199,31 @@ server <- function(input, output, session) {
       nrow(filtered_data$data)
     )
   })
+  
+  # Display the filtered data in a table
+  output$data_table <- DT::renderDataTable({
+    filtered_data$data
+  },
+  options = list(
+    pageLength = 10,
+    scrollX = TRUE
+  ))
+  
+  # Download the filtered data as a CSV file
+  output$download_data <- downloadHandler(
+    
+    filename = function() {
+      "superstore_filtered.csv"
+    },
+    
+    content = function(file) {
+      write.csv(
+        filtered_data$data,
+        file,
+        row.names = FALSE
+      )
+    }
+  )
 }
 
 # Run the application 
