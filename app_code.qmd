@@ -1,0 +1,145 @@
+---
+title: "Project 2"
+author: "Maya Szymborski"
+format: html
+editor: source
+execute:
+  error: true
+  warning: false
+  message: false
+  cache: true
+---
+
+## Data Exploration
+
+First, I am just taking a quick look at the data.
+
+```{r}
+# load packages
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# import data
+superstore <- read_excel("data/superstore_data.xls")
+
+# look at data, check size and structure 
+
+names(superstore)
+head(superstore)
+dim(superstore) # 9994 rows, 21 columns (variables) 
+str(superstore) # POSIXct means date/time values
+
+# Postal Code should be a character string, not numeric
+# use 'col_types = "guess"' so R can guess the rest of the columns 
+# (should stay same as before) 
+# but explicitly read the Postal Code column, column 12, as text 
+
+superstore <- read_excel(
+  "data/superstore_data.xls",
+  col_types = c(
+    rep("guess", 11),
+    "text",
+    rep("guess", 9)
+  )
+)
+
+# check this
+str(superstore)
+str(superstore$`Postal Code`)
+```
+
+**Numeric Variables:**
+
+- Row ID (doesn't really matter)
+- Sales
+- Quantity
+- Discount
+- Profit
+
+**Categorical Variables:**
+
+- Order ID
+- Ship Mode
+- Customer ID
+- Customer Name
+- Segment
+- Country
+- City
+- State
+- Postal Code
+- Region
+- Product ID
+- Category
+- Sub-Category
+- Product Name
+
+```{r}
+# check for any missing values
+colSums(is.na(superstore)) # none!
+```
+
+## Research Questions 
+
+I am interested in 3 main questions: 
+
+1) **Which states have the highest sales, number of orders, and number of customers?** 
+2. **What do customers in these states buy most often?** 
+3. **Are the sales in these states profitable?** 
+
+### State Summary
+```{r}
+# summarize sales, profit, orders, and customers by state
+
+# `n_distinct()` counts unique values instead of every row 
+
+state_summary <- superstore |>
+  group_by(State) |>
+  summarize(
+    total_sales = sum(Sales),
+    total_profit = sum(Profit),
+    profit_margin = total_profit / total_sales * 100,
+    total_orders = n_distinct(`Order ID`),
+    total_customers = n_distinct(`Customer ID`),
+    .groups = "drop"
+  )
+
+# show top 10 states by number of sales 
+
+top_states <- state_summary |>
+  arrange(desc(total_sales)) |>
+  slice_head(n = 10)
+
+top_states
+
+# show top 10 states by number of orders
+top_orders <- state_summary |>
+  arrange(desc(total_orders)) |>
+  slice_head(n = 10)
+
+top_orders
+
+# show top 10 states by number of customers
+top_customers <- state_summary |>
+  arrange(desc(total_customers)) |>
+  slice_head(n = 10)
+
+top_customers
+```
+
+### State and Category Summary
+```{r}
+state_cat_summary <- superstore |>
+  group_by(State, Category) |>
+  summarize(
+    total_quantity = sum(Quantity),
+    total_sales = sum(Sales),
+    total_profit = sum(Profit),
+    .groups = "drop"
+  )
+
+# compare categories in the 10 highest-sales states
+state_cat_summary |>
+  filter(State %in% top_states$State) |>
+  arrange(State, desc(total_quantity))
+```
