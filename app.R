@@ -20,12 +20,12 @@ num_choices <- c("Sales", "Quantity", "Discount", "Profit")
 
 # Define the user interface
 ui <- page_sidebar(
-  title = "Superstore Sales",
+  title = "Exploring Superstore Sales",
   
   sidebar = sidebar(
     h4("Filter the Data"),
     
-    # Categorical filter: State
+    # Filter by State
     selectInput(
       inputId = "state",
       label = "Choose State(s):",
@@ -38,7 +38,7 @@ ui <- page_sidebar(
     ),
     
     
-    # Categorical filter: Category
+    # Filter by Category
     selectInput(
       inputId = "category",
       label = "Choose Product Category:",
@@ -82,7 +82,6 @@ ui <- page_sidebar(
   ),
   
   # Main Panel Tabs
-  
   navset_tab(
     nav_panel(
       "About",
@@ -108,7 +107,77 @@ ui <- page_sidebar(
     nav_panel(
       "Explore Data",
       h3("Explore the Data"),
-      p("Your summaries and graphs will go here.")
+      
+      radioButtons(
+        inputId = "explore_type",
+        label = "Choose a type of summary:",
+        choices = c(
+          "Categorical Summaries" = "categorical",
+          "Numeric Summaries" = "numeric"
+        ),
+        selected = "categorical",
+        inline = TRUE
+      ),
+      
+      # Categorical Summaries
+      conditionalPanel(
+        condition = "input.explore_type == 'categorical'",
+        
+        h4("Contigency Tables"),
+        
+        selectInput(
+          inputId = "cat_var1",
+          label = "First categorical variable:",
+          choices = c(
+            "Category", "Sub-Category", "State",
+            "Region", "Segment", "Ship Mode"
+          ),
+          selected = "Category"
+        ),
+        
+        selectInput(
+          inputId = "cat_var2",
+          label = "Second categorical variable (optional):",
+          choices = c(
+            "None" = "None",
+            "Category" = "Category",
+            "Sub-Category" = "Sub-Category",
+            "State" = "State",
+            "Region" = "Region",
+            "Segment" = "Segment",
+            "Ship Mode" = "Ship Mode"
+          ),
+          selected = "None"
+        ),
+        
+        tableOutput("cat_summary")
+      ),
+      
+      # Numeric Summaries
+      conditionalPanel(
+        condition = "input.explore_type == 'numeric'",
+        
+        h4("Numeric Summary Statistics"),
+        
+        selectInput(
+          inputId = "num_sum",
+          label = "Numeric variable to summarize:",
+          choices = c("Sales", "Profit", "Quantity", "Discount"),
+          selected = "Sales"
+        ),
+        
+        selectInput(
+          inputId = "sum_group",
+          label = "Summarize across the levels of:",
+          choices = c(
+            "Category", "Sub-Category", "State",
+            "Region", "Segment", "Ship Mode"
+          ),
+          selected = "Category"
+        ),
+        
+        tableOutput("num_summary")
+      )
     )
   )
 )
@@ -224,6 +293,65 @@ server <- function(input, output, session) {
       )
     }
   )
+  
+  
+  # Create a one-way or two-way contingency table
+  output$cat_summary <- renderTable({
+    
+    data <- filtered_data$data
+    
+    req(input$cat_var1, input$cat_var2)
+    
+    validate(
+      need(nrow(data) > 0, "No rows match the applied filters.")
+    )
+    
+    if (input$cat_var2 == "None") {
+      
+      # One-way table
+      as.data.frame(
+        table(data[[input$cat_var1]]),
+        responseName = "Frequency"
+      ) |>
+        dplyr::rename(!!input$cat_var1 := Var1)
+      
+    } else {
+      
+      # Two-way table
+      as.data.frame.matrix(
+        table(
+          data[[input$cat_var1]],
+          data[[input$cat_var2]]
+        )
+      ) |>
+        tibble::rownames_to_column(var = input$cat_var1)
+      
+    }
+    
+  })
+
+  # Calculate numeric summary statistics
+  output$num_summary <- renderTable({
+    
+    data <- filtered_data$data
+    
+    req(input$num_sum)
+    req(input$sum_group)
+    
+    validate(
+      need(nrow(data) > 0, "No rows match the applied filters.")
+    )
+    
+    data |>
+      group_by(.data[[input$sum_group]]) |>
+      summarize(
+        count = sum(!is.na(.data[[input$num_sum]])),
+        mean = mean(.data[[input$num_sum]], na.rm = TRUE),
+        median = median(.data[[input$num_sum]], na.rm = TRUE),
+        sd = sd(.data[[input$num_sum]], na.rm = TRUE),
+        .groups = "drop"
+      )
+  })
 }
 
 # Run the application 
