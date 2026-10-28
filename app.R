@@ -153,7 +153,7 @@ ui <- page_sidebar(
         tableOutput("cat_summary")
       ),
       
-      # Numeric Summaries
+      # Numerical Summaries
       conditionalPanel(
         condition = "input.explore_type == 'numeric'",
         
@@ -177,7 +177,27 @@ ui <- page_sidebar(
         ),
         
         tableOutput("num_summary")
-      )
+      ),
+      
+      # Graphs
+      h4("Data Visualizations"),
+      
+      selectInput(
+        inputId = "plot_type",
+        label = "Choose a graph type:",
+        choices = c(
+          "Bar Chart" = "bar_chart",
+          "Side-By-Side Bar Chart" = "side_bar_chart",
+          "Scatterplot" = "scatterplot",
+          "Boxplot" = "boxplot",
+          "Faceted Bar Chart" = "facet_bar_chart",
+          "Heatmap" = "heatmap"
+        ),
+        selected = "bar_chart"
+      ),
+      
+      uiOutput("plot_controls"),
+      plotOutput("superstore_plot")
     )
   )
 )
@@ -346,10 +366,275 @@ server <- function(input, output, session) {
       group_by(.data[[input$sum_group]]) |>
       summarize(
         count = sum(!is.na(.data[[input$num_sum]])),
-        mean = mean(.data[[input$num_sum]], na.rm = TRUE),
-        median = median(.data[[input$num_sum]], na.rm = TRUE),
-        sd = sd(.data[[input$num_sum]], na.rm = TRUE),
+        mean = round(mean(.data[[input$num_sum]], na.rm = TRUE), 2),
+        median = round(median(.data[[input$num_sum]], na.rm = TRUE), 2),
+        sd = round(sd(.data[[input$num_sum]], na.rm = TRUE), 2),
         .groups = "drop"
+      )
+  })
+  
+  # Create variable selectors based on the selected graph
+  output$plot_controls <- renderUI({
+    
+    cat_vars <- c(
+      "Category", "Sub-Category", "State",
+      "City", "Region", "Segment", "Ship Mode"
+    )
+    
+    num_vars <- c("Sales", "Profit", "Quantity", "Discount")
+    
+    switch(
+      input$plot_type,
+      
+      "bar_chart" = tagList(
+        selectInput("plot_var1", "Categorical variable:",
+                    choices = cat_vars, selected = "Category"),
+        selectInput("plot_var2", "Numeric variable:",
+                    choices = num_vars, selected = "Sales")
+      ),
+      
+      "side_bar_chart" = tagList(
+        selectInput("plot_var1", "First categorical variable:",
+                    choices = cat_vars, selected = "State"),
+        selectInput("plot_var2", "Second categorical variable:",
+                    choices = cat_vars, selected = "Category"),
+        selectInput("plot_var3", "Numeric variable:",
+                    choices = num_vars, selected = "Sales")
+      ),
+      
+      "scatterplot" = tagList(
+        selectInput("plot_var1", "X-axis (numeric):",
+                    choices = num_vars, selected = "Sales"),
+        selectInput("plot_var2", "Y-axis (numeric):",
+                    choices = num_vars, selected = "Profit"),
+        selectInput("plot_color", "Color points by:",
+                    choices = c("None", cat_vars),
+                    selected = "Region")
+      ),
+      
+      "boxplot" = tagList(
+        selectInput("plot_var1", "Categorical variable:",
+                    choices = cat_vars, selected = "Category"),
+        selectInput("plot_var2", "Numeric variable:",
+                    choices = num_vars, selected = "Profit")
+      ),
+      
+      "facet_bar_chart" = tagList(
+        selectInput("plot_var1", "Categorical variable:",
+                    choices = cat_vars, selected = "Sub-Category"),
+        selectInput("plot_var2", "Numeric variable:",
+                    choices = num_vars, selected = "Sales"),
+        selectInput("plot_facet", "Separate panels by:",
+                    choices = cat_vars, selected = "Category")
+      ),
+      
+      "heatmap" = tagList(
+        selectInput("plot_var1", "First categorical variable:",
+                    choices = cat_vars, selected = "State"),
+        selectInput("plot_var2", "Second categorical variable:",
+                    choices = cat_vars, selected = "Category"),
+        selectInput("plot_var3", "Numeric variable for tile color:",
+                    choices = num_vars, selected = "Sales")
+      )
+    )
+  })
+  
+  
+  # Create the selected graph
+  output$superstore_plot <- renderPlot({
+    
+    data <- filtered_data$data
+    
+    req(input$plot_type, input$plot_var1, input$plot_var2)
+    
+    validate(
+      need(nrow(data) > 0, "No rows match the applied filters.")
+    )
+    
+    # Create the appropriate graph
+    plot <- switch(
+      input$plot_type,
+      
+      # Bar chart
+      "bar_chart" = {
+        plot_data <- data |>
+          group_by(.data[[input$plot_var1]]) |>
+          summarize(
+            value = sum(.data[[input$plot_var2]], na.rm = TRUE),
+            .groups = "drop"
+          )
+        
+        ggplot(plot_data, aes(x = .data[[input$plot_var1]], y = value)) +
+          geom_col() +
+          labs(
+            title = paste(input$plot_var2, "by", input$plot_var1),
+            x = input$plot_var1,
+            y = paste("Total", input$plot_var2)
+          )
+      },
+      
+      # Side-by-side bar chart
+      "side_bar_chart" = {
+        req(input$plot_var3)
+        
+        validate(
+          need(input$plot_var1 != input$plot_var2,
+               "Choose two different categorical variables.")
+        )
+        
+        plot_data <- data |>
+          group_by(
+            .data[[input$plot_var1]],
+            .data[[input$plot_var2]]
+          ) |>
+          summarize(
+            value = sum(.data[[input$plot_var3]], na.rm = TRUE),
+            .groups = "drop"
+          )
+        
+        ggplot(
+          plot_data,
+          aes(
+            x = .data[[input$plot_var1]],
+            y = value,
+            fill = .data[[input$plot_var2]]
+          )
+        ) +
+          geom_col(position = "dodge") +
+          labs(
+            title = paste(input$plot_var3, "by",
+                          input$plot_var1, "and", input$plot_var2),
+            x = input$plot_var1,
+            y = paste("Total", input$plot_var3),
+            fill = input$plot_var2
+          )
+      },
+      
+      # Scatterplot
+      "scatterplot" = {
+        if (input$plot_color == "None") {
+          ggplot(
+            data,
+            aes(
+              x = .data[[input$plot_var1]],
+              y = .data[[input$plot_var2]]
+            )
+          ) +
+            geom_point(alpha = 0.5)
+        } else {
+          ggplot(
+            data,
+            aes(
+              x = .data[[input$plot_var1]],
+              y = .data[[input$plot_var2]],
+              color = .data[[input$plot_color]]
+            )
+          ) +
+            geom_point(alpha = 0.5)
+        } +
+          labs(
+            title = paste(input$plot_var2, "vs.", input$plot_var1),
+            x = input$plot_var1,
+            y = input$plot_var2,
+            color = input$plot_color
+          )
+      },
+      
+      # Boxplot
+      "boxplot" = {
+        ggplot(
+          data,
+          aes(
+            x = .data[[input$plot_var1]],
+            y = .data[[input$plot_var2]],
+            fill = .data[[input$plot_var1]]
+          )
+        ) +
+          geom_boxplot() +
+          labs(
+            title = paste(input$plot_var2, "by", input$plot_var1),
+            x = input$plot_var1,
+            y = input$plot_var2,
+            fill = input$plot_var1
+          )
+      },
+      
+      # Faceted bar chart
+      "facet_bar_chart" = {
+        req(input$plot_facet)
+        
+        plot_data <- data |>
+          group_by(
+            .data[[input$plot_var1]],
+            .data[[input$plot_facet]]
+          ) |>
+          summarize(
+            value = sum(.data[[input$plot_var2]], na.rm = TRUE),
+            .groups = "drop"
+          )
+        
+        ggplot(
+          plot_data,
+          aes(
+            x = .data[[input$plot_var1]],
+            y = value,
+            fill = .data[[input$plot_var1]]
+          )
+        ) +
+          geom_col() +
+          facet_wrap(vars(.data[[input$plot_facet]])) +
+          labs(
+            title = paste(input$plot_var2, "by",
+                          input$plot_var1, "faceted by", input$plot_facet),
+            x = input$plot_var1,
+            y = paste("Total", input$plot_var2),
+            fill = input$plot_var1
+          )
+      },
+      
+      # Heatmap
+      "heatmap" = {
+        req(input$plot_var3)
+        
+        validate(
+          need(input$plot_var1 != input$plot_var2,
+               "Choose two different categorical variables.")
+        )
+        
+        plot_data <- data |>
+          group_by(
+            .data[[input$plot_var1]],
+            .data[[input$plot_var2]]
+          ) |>
+          summarize(
+            value = sum(.data[[input$plot_var3]], na.rm = TRUE),
+            .groups = "drop"
+          )
+        
+        ggplot(
+          plot_data,
+          aes(
+            x = .data[[input$plot_var1]],
+            y = .data[[input$plot_var2]],
+            fill = value
+          )
+        ) +
+          geom_tile() +
+          labs(
+            title = paste(input$plot_var3, "by",
+                          input$plot_var1, "and", input$plot_var2),
+            x = input$plot_var1,
+            y = input$plot_var2,
+            fill = paste("Total", input$plot_var3)
+          )
+      }
+    )
+    
+    # Apply a consistent appearance to all graphs
+    plot + theme_bw() +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1)
       )
   })
 }
