@@ -474,7 +474,7 @@ server <- function(input, output, session) {
           ),
         selectInput(
           inputId = "plot_var3", 
-          labels = "Numeric variable:",
+          label = "Numeric variable:",
           choices = num_vars, 
           selected = "Sales")
       ),
@@ -510,6 +510,7 @@ server <- function(input, output, session) {
         selectInput(
           inputId = "plot_var2",
           label = "Numeric variable:", 
+          choices = num_vars,
           selected = "Profit"
           )
       ),
