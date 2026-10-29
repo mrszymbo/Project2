@@ -1,10 +1,11 @@
-
 library(shiny)
 library(bslib)
 library(readxl)
 library(dplyr)
 library(DT)
+library(ggplot2)
 library(shinycssloaders)
+library(scales) 
 
 # load data
 superstore <- read_excel(
@@ -19,14 +20,12 @@ superstore <- read_excel(
 # Numeric Variables for filtering 
 num_choices <- c("Sales", "Quantity", "Discount", "Profit")
 
-
 # Define the user interface
 ui <- page_sidebar(
   title = "Exploring Superstore Sales",
   
   # Sidebar filters
   sidebar = sidebar(
-    
     h4("Filter the Data"),
     
     # Filter by state
@@ -73,14 +72,14 @@ ui <- page_sidebar(
     
     uiOutput("num_slider2"),
     
-    # Apply filters
+    # Apply filters button
     actionButton(
       inputId = "apply_filters",
       label = "Apply Filters",
       class = "btn-primary"
     ),
     
-    # Number of rows after filtering
+    # Show number of rows after filtering
     textOutput("filter_status")
   ),
   
@@ -89,73 +88,63 @@ ui <- page_sidebar(
     
     # About tab
     nav_panel(
-      "About",
+      title = "About",
       
       br(),
       
+      img(
+        src = "grocery_store.jpg",
+        style = paste(
+          "width: 100%;",
+          "max-height: 250px;",
+          "object-fit: cover;",
+          "border-radius: 8px;",
+          "margin-bottom: 20px;"
+        )
+      ),
+      
       h3("About This App"),
       
+      p("This app explores the Superstore dataset by letting users investigate how sales and profits vary across products and states."),
+      
+      br(),
+      
+      h4("About the Dataset"),
+      
+      p("The dataset was provided by Dr. Post and comes from Kaggle. It contains information about product categories, sales, discounts, quantities, and profits."),
+      
       p(
-        "This app explores sales, profitability, and product trends using the Superstore dataset.",
-        "It lets users investigate how sales and profits vary across products, customers, and locations."
-    ),
-    
-    br(),
-    
-    h4("About the Dataset"),
-    
-    p(
-      "The dataset was provided by Dr. Post and comes from Kaggle.",
-      "It contains information about orders, customers, product categories, sales, dicsounts, quantities, and profits."
-    ),
-    
-    p(
-      "Data source: ",
-      a(
-        "Superstore Dataset on Kaggle",
-        href = "https://www.kaggle.com/datasets/juhi1994/superstore/data",
-        target = "_blank"
-      )
-    ),
-    
-    br(),
-    
-    h4("How to Use This App"),
-    
-    tags$ol(
-      tags$li(
-        "Use the sidebar to filter by state, product category, and numeric variable ranges."
+        "Data source: ",
+        a(
+          "Superstore Dataset on Kaggle",
+          href = "https://www.kaggle.com/datasets/juhi1994/superstore/data",
+          target = "_blank"
+        )
       ),
-      tags$li(
-        "Click Apply Filters to update the data used throughout the app."
+      
+      br(),
+      
+      h4("How to Use This App"),
+      
+      tags$ol(
+        tags$li("Use the sidebar to filter by state, product category, and numeric variable ranges."),
+        tags$li("Click Apply Filters to update the data used throughout the app."),
+        tags$li("Use the Download Data tab to view the filtered records or download them as a CSV file."),
+        tags$li("Use the Explore Data tab to view contingency tables, numeric summary statistics, and visualizations.")
       ),
-      tags$li(
-        "Use the Download Data tab to view the filtered records or download them as a CSV file."
-      ),
-      tags$li(
-        "Visit the Explore Data tab to view contingency tables, numeric summary statistics, and interactive visualizations."
-      )
-    ),
-    
-    br(),
-    
-    h4("What Can You Explore?"),
-    
-    tags$ul(
-      tags$li("Which states and cities generate the most sales."),
-      tags$li("How sales and profits vary across product categories."),
-      tags$li("Relationships between numeric variables such as sales and profit."),
-      tags$li("Differences in sales across groups and locations.")
-    )
-    ),
+      
+      br()
+      
+    ), 
     
     # Download Data tab
     nav_panel(
-      "Download Data",
+      title = "Download Data",
       
       br(),
       
       h3("Download the Data"),
+      
       p("This table shows the data after the filters are applied."),
       
       DT::dataTableOutput("data_table"),
@@ -163,6 +152,7 @@ ui <- page_sidebar(
       br(),
       br(),
       
+      # Download data button
       downloadButton(
         outputId = "download_data",
         label = "Download the Filtered Data"
@@ -170,11 +160,12 @@ ui <- page_sidebar(
       
       br(),
       br()
+      
     ),
     
     # Explore Data tab
     nav_panel(
-      "Explore Data",
+      title = "Explore Data",
       
       br(),
       
@@ -184,20 +175,19 @@ ui <- page_sidebar(
       
       # Nested tabs
       navset_tab(
+        
         # Summary Statistics tab
         nav_panel(
-          "Summary Statistics",
+          title = "Summary Statistics",
           
-          tags$div(
-            style = "margin-bottom: 20px;"
-          ),
+          tags$div(style = "margin-bottom: 20px;"),
           
           radioButtons(
             inputId = "explore_type",
             label = tags$div(
               style = "margin-bottom: 10px;",
               "Choose a type of summary:"
-                             ),
+            ),
             choices = c(
               "Categorical Summaries" = "categorical",
               "Numeric Summaries" = "numeric"
@@ -206,7 +196,7 @@ ui <- page_sidebar(
             inline = TRUE
           ),
           
-          # Categorical summaries
+          # Categorical summaries panel
           conditionalPanel(
             condition = "input.explore_type == 'categorical'",
             
@@ -240,7 +230,7 @@ ui <- page_sidebar(
             tableOutput("cat_summary")
           ),
           
-          # Numeric summaries
+          # Numeric summaries panel
           conditionalPanel(
             condition = "input.explore_type == 'numeric'",
             
@@ -269,11 +259,9 @@ ui <- page_sidebar(
         
         # Data Visualizations tab
         nav_panel(
-          "Data Visualizations",
+          title = "Data Visualizations",
           
-          tags$div(
-            style = "margin-bottom: 20px;"
-          ),
+          tags$div(style = "margin-bottom: 20px;"),
           
           selectInput(
             inputId = "plot_type",
@@ -296,11 +284,10 @@ ui <- page_sidebar(
             type = 7
           )
         )
-      )
-    )
-  )
-)
-
+      ) 
+    ) 
+  ) 
+) 
 
 # Define the server
 server <- function(input, output, session) {
@@ -313,9 +300,8 @@ server <- function(input, output, session) {
     
     sliderInput(
       inputId = "range1",
-      label = paste("Choose a range for",
+      label = paste("Choose a range for", 
                     input$num_var1),
-      
       min = min(values, na.rm = TRUE),
       max = max(values, na.rm = TRUE),
       value = range(values, na.rm = TRUE)
@@ -332,7 +318,6 @@ server <- function(input, output, session) {
       inputId = "range2",
       label = paste("Choose a range for",
                     input$num_var2),
-      
       min = min(values, na.rm = TRUE),
       max = max(values, na.rm = TRUE),
       value = range(values, na.rm = TRUE)
@@ -346,456 +331,456 @@ server <- function(input, output, session) {
   
   # Make sure data updates only when Apply Filters is clicked
   observeEvent(input$apply_filters, {
-    
     filtered <- superstore
     
-    # Filter by state unless all states are selected
-    if (!is.null(input$state) &&
+    if (!is.null(input$state) && 
         !"__ALL__" %in% input$state) {
-      filtered <- filtered |>
+      filtered <- filtered |> 
         filter(State %in% input$state)
     }
     
-    # Filter by category unless all categories are selected
-    if (!is.null(input$category) &&
+    if (!is.null(input$category) && 
         !"__ALL__" %in% input$category) {
-      filtered <- filtered |>
+      filtered <- filtered |> 
         filter(Category %in% input$category)
     }
     
-    # Filter by the first numeric variable
     req(input$range1)
-    
     filtered <- filtered |>
       filter(
         .data[[input$num_var1]] >= input$range1[1],
         .data[[input$num_var1]] <= input$range1[2]
       )
     
-    # Filter by the second numeric variable
     req(input$range2)
-    
     filtered <- filtered |>
       filter(
         .data[[input$num_var2]] >= input$range2[1],
         .data[[input$num_var2]] <= input$range2[2]
       )
     
-    # Save the filtered data
     filtered_data$data <- filtered
   })
   
   # Display the number of rows in the applied data
   output$filter_status <- renderText({
-    paste(
-      "Rows after applying filters:",
-      nrow(filtered_data$data)
-    )
+    paste("Rows after applying filters:", nrow(filtered_data$data))
   })
   
   # Display the filtered data in a table
   output$data_table <- DT::renderDataTable({
     filtered_data$data
-  },
+  }, 
   options = list(
-    pageLength = 10,
-    scrollX = TRUE
-  ))
+    pageLength = 10, 
+    scrollX = TRUE)
+  )
   
   # Download the filtered data as a CSV file
   output$download_data <- downloadHandler(
-    
-    filename = function() {
-      "superstore_filtered.csv"
-    },
-    
+    filename = function() { "superstore_filtered.csv" },
     content = function(file) {
-      write.csv(
-        filtered_data$data,
-        file,
-        row.names = FALSE
-      )
+      write.csv(filtered_data$data, file, row.names = FALSE)
     }
   )
   
-  
   # Create a one-way or two-way contingency table
   output$cat_summary <- renderTable({
-    
     data <- filtered_data$data
     
     req(input$cat_var1, input$cat_var2)
     
-    validate(
-      need(nrow(data) > 0, "No rows match the applied filters.")
-    )
+    validate(need(nrow(data) > 0, 
+                  "No rows match the applied filters."))
     
     if (input$cat_var2 == "None") {
-      
-      # One-way table
-      as.data.frame(
-        table(data[[input$cat_var1]]),
-        responseName = "Frequency"
-      ) |>
+      as.data.frame(table(data[[input$cat_var1]]), 
+                    responseName = "Frequency") |>
         dplyr::rename(!!input$cat_var1 := Var1)
       
     } else {
-      
-      # Two-way table
-      as.data.frame.matrix(
-        table(
-          data[[input$cat_var1]],
-          data[[input$cat_var2]]
-        )
-      ) |>
+      as.data.frame.matrix(table(data[[input$cat_var1]], data[[input$cat_var2]])) |>
         tibble::rownames_to_column(var = input$cat_var1)
-      
     }
-    
   })
-
+  
   # Calculate numeric summary statistics
   output$num_summary <- renderTable({
-    
     data <- filtered_data$data
     
-    req(input$num_sum)
-    req(input$sum_group)
+    req(input$num_sum, input$sum_group)
     
-    validate(
-      need(nrow(data) > 0, "No rows match the applied filters.")
-    )
+    validate(need(nrow(data) > 0, 
+                  "No rows match the applied filters."))
     
     data |>
       group_by(.data[[input$sum_group]]) |>
       summarize(
         count = sum(!is.na(.data[[input$num_sum]])),
-        mean = round(mean(.data[[input$num_sum]], na.rm = TRUE), 2),
-        median = round(median(.data[[input$num_sum]], na.rm = TRUE), 2),
-        sd = round(sd(.data[[input$num_sum]], na.rm = TRUE), 2),
+        mean = round(
+          mean(.data[[input$num_sum]], na.rm = TRUE), 
+          digits = 2
+          ),
+        median = round(
+          median(.data[[input$num_sum]], na.rm = TRUE), 
+          digits = 2
+          ),
+        sd = round(
+          sd(.data[[input$num_sum]], na.rm = TRUE), 
+          digits = 2
+          ),
         .groups = "drop"
       )
   })
   
   # Create variable selectors based on the selected graph
   output$plot_controls <- renderUI({
-    
     cat_vars <- c(
-      "Category", "Sub-Category", "State",
-      "City", "Region", "Segment", "Ship Mode"
-    )
-    
+      "Category", "Sub-Category", "State", "City", 
+      "Region", "Segment", "Ship Mode"
+      )
     num_vars <- c("Sales", "Profit", "Quantity", "Discount")
     
     switch(
       input$plot_type,
       
       "bar_chart" = tagList(
-        selectInput("plot_var1", "Categorical variable:",
-                    choices = cat_vars, selected = "Category"),
-        selectInput("plot_var2", "Numeric variable:",
-                    choices = num_vars, selected = "Sales")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "Categorical variable:", 
+          choices = cat_vars, 
+          selected = "Category"
+          ),
+        selectInput(
+          inputId = "plot_var2", 
+          label = "Numeric variable:", 
+          choices = num_vars, 
+          selected = "Sales"
+          )
       ),
       
       "side_bar_chart" = tagList(
-        selectInput("plot_var1", "First categorical variable:",
-                    choices = cat_vars, selected = "State"),
-        selectInput("plot_var2", "Second categorical variable:",
-                    choices = cat_vars, selected = "Category"),
-        selectInput("plot_var3", "Numeric variable:",
-                    choices = num_vars, selected = "Sales")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "First categorical variable:", 
+          choices = cat_vars, 
+          selected = "State"
+          ),
+        selectInput(
+          inputId = "plot_var2", 
+          label = "Second categorical variable:", 
+          choices = cat_vars, 
+          selected = "Category"
+          ),
+        selectInput(
+          inputId = "plot_var3", 
+          labels = "Numeric variable:",
+          choices = num_vars, 
+          selected = "Sales")
       ),
       
       "scatterplot" = tagList(
-        selectInput("plot_var1", "X-axis (numeric):",
-                    choices = num_vars, selected = "Sales"),
-        selectInput("plot_var2", "Y-axis (numeric):",
-                    choices = num_vars, selected = "Profit"),
-        selectInput("plot_color", "Color points by:",
-                    choices = c("None", cat_vars),
-                    selected = "Region")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "X-axis (numeric):", 
+          choices = num_vars, 
+          selected = "Sales"
+          ),
+        selectInput(
+          inputId = "plot_var2", 
+          label = "Y-axis (numeric):", 
+          choices = num_vars, 
+          selected = "Profit"
+          ),
+        selectInput(
+          inputId = "plot_color", 
+          label = "Color points by:",
+          choices = c("None", cat_vars), 
+          selected = "Region"
+          )
       ),
       
       "boxplot" = tagList(
-        selectInput("plot_var1", "Categorical variable:",
-                    choices = cat_vars, selected = "Category"),
-        selectInput("plot_var2", "Numeric variable:",
-                    choices = num_vars, selected = "Profit")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "Categorical variable:", 
+          choices = cat_vars, 
+          selected = "Category"
+          ),
+        selectInput(
+          inputId = "plot_var2",
+          label = "Numeric variable:", 
+          selected = "Profit"
+          )
       ),
       
       "facet_bar_chart" = tagList(
-        selectInput("plot_var1", "Categorical variable:",
-                    choices = cat_vars, selected = "Sub-Category"),
-        selectInput("plot_var2", "Numeric variable:",
-                    choices = num_vars, selected = "Sales"),
-        selectInput("plot_facet", "Separate panels by:",
-                    choices = cat_vars, selected = "Category")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "Categorical variable:", 
+          choices = cat_vars, 
+          selected = "Sub-Category"
+          ),
+        selectInput(
+          inputId = "plot_var2", 
+          label = "Numeric variable:", 
+          choices = num_vars, 
+          selected = "Sales"
+          ),
+        selectInput(
+          inputId = "plot_facet", 
+          label = "Separate panels by:", 
+          choices = cat_vars, 
+          selected = "Category"
+          )
       ),
       
       "heatmap" = tagList(
-        selectInput("plot_var1", "First categorical variable:",
-                    choices = cat_vars, selected = "State"),
-        selectInput("plot_var2", "Second categorical variable:",
-                    choices = cat_vars, selected = "Category"),
-        selectInput("plot_var3", "Numeric variable for tile color:",
-                    choices = num_vars, selected = "Sales")
+        selectInput(
+          inputId = "plot_var1", 
+          label = "First categorical variable:", 
+          choices = cat_vars, 
+          selected = "State"
+          ),
+        selectInput(
+          inputId = "plot_var2", 
+          label = "Second categorical variable:", 
+          choices = cat_vars, 
+          selected = "Category"
+          ),
+        selectInput(
+          inputId = "plot_var3", 
+          label = "Numeric variable for tile color:",
+          choices = num_vars, 
+          selected = "Sales"
+          )
       )
     )
   })
   
-  
   # Create the selected graph
   output$superstore_plot <- renderPlot({
-    
     data <- filtered_data$data
     
     req(input$plot_type, input$plot_var1, input$plot_var2)
     
-    validate(
-      need(nrow(data) > 0, "No rows match the applied filters.")
-    )
+    validate(need(nrow(data) > 0, 
+                  "No rows match the applied filters."))
     
-    # Check that selected variables match the graph type
-    cat_vars <- c(
-      "Category", "Sub-Category", "State",
-      "City", "Region", "Segment", "Ship Mode"
-    )
-    
+    cat_vars <- c("Category", "Sub-Category", "State", 
+                  "City", "Region", "Segment", "Ship Mode"
+                  )
     num_vars <- c("Sales", "Profit", "Quantity", "Discount")
     
     if (input$plot_type %in% c("bar_chart", "boxplot", "facet_bar_chart")) {
+      
       validate(
-        need(
-          input$plot_var1 %in% cat_vars,
-          "Please select a categorical variable.")
-      )
+        need(input$plot_var1 %in% cat_vars, 
+             "Please select a categorical variable."))
     }
     
     if (input$plot_type %in% c("side_bar_chart", "heatmap")) {
       validate(
-        need(
-          input$plot_var1 %in% cat_vars &&
-            input$plot_var2 %in% cat_vars,
-          "Please select categorical variables for both fields."
-        )
-      )
+        need(input$plot_var1 %in% cat_vars && 
+               input$plot_var2 %in% cat_vars, 
+             "Please select categorical variables for both fields."))
     }
     
     if (input$plot_type == "scatterplot") {
+      
       validate(
-        need(
-          input$plot_var1 %in% num_vars &&
-            input$plot_var2 %in% num_vars,
-          "Please select numeric variables for both axes."
-        )
-      )
+        need(input$plot_var1 %in% num_vars && 
+               input$plot_var2 %in% num_vars, 
+             "Please select numeric variables for both axes."))
     }
     
-    # Create the appropriate graph
     plot <- switch(
       input$plot_type,
       
-      # Bar chart
       "bar_chart" = {
         plot_data <- data |>
           group_by(.data[[input$plot_var1]]) |>
-          summarize(
-            value = sum(.data[[input$plot_var2]], na.rm = TRUE),
-            .groups = "drop"
-          )
+          summarize(value = sum(.data[[input$plot_var2]], na.rm = TRUE), 
+                    .groups = "drop"
+                    )
         
-        ggplot(plot_data, aes(x = .data[[input$plot_var1]], y = value)) +
+        ggplot(
+          plot_data, 
+          aes(
+            x = .data[[input$plot_var1]], 
+            y = value
+            )) +
           geom_col() +
           labs(
             title = paste(
-              input$plot_var2, "by", 
-              input$plot_var1),
-            
-            x = input$plot_var1,
+              input$plot_var2, "by", input$plot_var1
+              ), 
+            x = input$plot_var1, 
             y = paste("Total", input$plot_var2)
-          )
+            )
       },
       
-      # Side-by-side bar chart
       "side_bar_chart" = {
         req(input$plot_var3)
         
         validate(
-          need(
-            input$plot_var1 != input$plot_var2,
-            "Choose two different categorical variables.")
-        )
+          need(input$plot_var1 != input$plot_var2, 
+               "Choose two different categorical variables."))
         
         plot_data <- data |>
-          group_by(
-            .data[[input$plot_var1]],
-            .data[[input$plot_var2]]
-          ) |>
+          group_by(.data[[input$plot_var1]], 
+                   .data[[input$plot_var2]]) |>
           summarize(
-            value = sum(.data[[input$plot_var3]], na.rm = TRUE),
+            value = sum(.data[[input$plot_var3]], na.rm = TRUE), 
             .groups = "drop"
-          )
+            )
         
         ggplot(
-          plot_data,
+          plot_data, 
           aes(
-            x = .data[[input$plot_var1]],
-            y = value,
+            x = .data[[input$plot_var1]], 
+            y = value, 
             fill = .data[[input$plot_var2]]
-          )
-        ) +
+            )) +
+          
           geom_col(position = position_dodge()) +
+          
           labs(
-            title = paste(
-              "Total", input$plot_var3, "by",
-              input$plot_var1, "and", 
-              input$plot_var2),
-            
-            x = input$plot_var1,
-            y = paste("Total", input$plot_var3),
+            title = paste("Total", input$plot_var3, "by", 
+                          input$plot_var1, "and", 
+                          input$plot_var2
+                          ),
+            x = input$plot_var1, 
+            y = paste("Total", input$plot_var3), 
             fill = input$plot_var2
-          )
+            )
       },
       
-      # Scatterplot
       "scatterplot" = {
         req(input$plot_color)
         
         if (input$plot_color == "None") {
-          plot <- ggplot(
-            data,
+          plot_obj <- ggplot(
+            data, 
             aes(
-              x = .data[[input$plot_var1]],
+              x = .data[[input$plot_var1]], 
               y = .data[[input$plot_var2]]
+              )
             )
-          ) +
-            geom_point(alpha = 0.5)
         } else {
-          plot <- ggplot(
-            data,
-            aes(
-              x = .data[[input$plot_var1]],
-              y = .data[[input$plot_var2]],
-              color = .data[[input$plot_color]]
+          plot_obj <- ggplot(
+            data, 
+            aes(x = .data[[input$plot_var1]], 
+                y = .data[[input$plot_var2]], 
+                color = .data[[input$plot_color]]
+                )
             )
-          )
         }
         
-        plot + 
+        plot_obj + 
           geom_point(alpha = 0.5) +
+          
           labs(
-            title = paste(
-              input$plot_var2, "vs.", 
-              input$plot_var1),
-            
-            x = input$plot_var1,
+            title = paste(input$plot_var2, "vs.", 
+                          input$plot_var1), 
+            x = input$plot_var1, 
             y = input$plot_var2,
-            color = if (input$plot_color == "None") NULL
-            else input$plot_color
-          )
+            color = 
+              if (input$plot_color == "None") NULL 
+            else input$plot_color)
       },
       
-      # Boxplot
       "boxplot" = {
         ggplot(
-          data,
+          data, 
           aes(
-            x = .data[[input$plot_var1]],
-            y = .data[[input$plot_var2]],
+            x = .data[[input$plot_var1]], 
+            y = .data[[input$plot_var2]], 
             fill = .data[[input$plot_var1]]
-          )
-        ) +
+            )) +
           geom_boxplot() +
           labs(
-            title = paste(
-              input$plot_var2, "by", 
-              input$plot_var1),
-            
-            x = input$plot_var1,
-            y = input$plot_var2,
-            fill = input$plot_var1
-          )
+            title = paste(input$plot_var2, "by", 
+                          input$plot_var1), 
+            x = input$plot_var1, 
+            y = input$plot_var2, 
+            fill = input$plot_var1)
       },
       
-      # Faceted bar chart
       "facet_bar_chart" = {
         req(input$plot_facet)
         
         plot_data <- data |>
-          group_by(
-            .data[[input$plot_var1]],
-            .data[[input$plot_facet]]
-          ) |>
+          group_by(.data[[input$plot_var1]], 
+                   .data[[input$plot_facet]]
+                   ) |>
           summarize(
-            value = sum(.data[[input$plot_var2]], na.rm = TRUE),
+            value = sum(.data[[input$plot_var2]], 
+                        na.rm = TRUE), 
             .groups = "drop"
-          )
+            )
         
         ggplot(
-          plot_data,
+          plot_data, 
           aes(
-            x = .data[[input$plot_var1]],
-            y = value,
+            x = .data[[input$plot_var1]], 
+            y = value, 
             fill = .data[[input$plot_var1]]
-          )
-        ) +
+            )) +
+          
           geom_col() +
-          facet_wrap(vars(.data[[input$plot_facet]])) +
+          
+          facet_wrap(
+            vars(.data[[input$plot_facet]])
+            ) +
+          
           labs(
-            title = paste(input$plot_var2, "by",
-                          input$plot_var1, 
-                          "faceted by",
+            title = paste(input$plot_var2, "by", 
+                          input$plot_var1, "faceted by", 
                           input$plot_facet),
-            
-            x = input$plot_var1,
-            y = paste("Total", input$plot_var2),
+            x = input$plot_var1, 
+            y = paste("Total", input$plot_var2), 
             fill = input$plot_var1
-          )
+            )
       },
       
-      # Heatmap
       "heatmap" = {
         req(input$plot_var3)
         
         validate(
-          need(
-            input$plot_var1 != input$plot_var2,
-            "Choose two different categorical variables.")
-        )
+          need(input$plot_var1 != input$plot_var2, 
+               "Choose two different categorical variables."))
         
         plot_data <- data |>
-          group_by(
-            .data[[input$plot_var1]],
-            .data[[input$plot_var2]]
-          ) |>
+          group_by(.data[[input$plot_var1]], 
+                   .data[[input$plot_var2]]) |>
           summarize(
-            value = sum(.data[[input$plot_var3]], na.rm = TRUE),
+            value = sum(.data[[input$plot_var3]], na.rm = TRUE), 
             .groups = "drop"
-          )
+            )
         
         ggplot(
-          plot_data,
+          plot_data, 
           aes(
-            x = .data[[input$plot_var1]],
-            y = .data[[input$plot_var2]],
+            x = .data[[input$plot_var1]], 
+            y = .data[[input$plot_var2]], 
             fill = value
-          )
-        ) +
+            )) +
+          
           geom_tile(color = "white", linewidth = 0.2) +
+          
           labs(
-            title = paste(
-              input$plot_var3, "by",
-              input$plot_var1, "and", 
-              input$plot_var2),
-            
-            x = input$plot_var1,
-            y = input$plot_var2,
+            title = paste(input$plot_var3, "by", 
+                          input$plot_var1, "and",
+                          input$plot_var2),
+            x = input$plot_var1, 
+            y = input$plot_var2, 
             fill = paste("Total", input$plot_var3)
-          )
+            )
       }
     )
     
-    # Apply a consistent appearance to all graphs
+    # Common theme adjustments
     plot <- plot +
       theme_bw() +
       theme(
@@ -803,40 +788,26 @@ server <- function(input, output, session) {
         axis.text.x = element_text(angle = 45, hjust = 1)
       )
     
-    # flip charts with long category labels
-    if (
-      input$plot_type == "bar_chart" &&
-      input$plot_var1 %in% c("State", "City", "Sub-Category")
-    ) {
+    # Flip charts with long labels
+    if (input$plot_type == "bar_chart" && 
+        input$plot_var1 %in% c("State", "City", "Sub-Category")) {
       plot <- plot + coord_flip()
     }
     
-    # Format numeric axes to two decimal places
+    # Axis formatting
     if (input$plot_type == "scatterplot") {
       
       plot <- plot +
-        scale_x_continuous(
-          labels = scales::label_number(accuracy = 0.01)
-        ) +
-        scale_y_continuous(
-          labels = scales::label_number(accuracy = 0.01)
-        )
+        scale_x_continuous(labels = scales::label_number(accuracy = 0.01)) +
+        scale_y_continuous(labels = scales::label_number(accuracy = 0.01))
       
-    } else if (input$plot_type %in% c(
-      "bar_chart", "side_bar_chart", "boxplot", "facet_bar_chart"
-    )) {
+    } else if (input$plot_type %in% c("bar_chart", "side_bar_chart", "boxplot", "facet_bar_chart")) {
       
-      plot <- plot +
-        scale_y_continuous(
-          labels = scales::label_number(accuracy = 0.01)
-        )
+      plot <- plot + scale_y_continuous(labels = scales::label_number(accuracy = 0.01))
       
     } else if (input$plot_type == "heatmap") {
       
-      plot <- plot +
-        scale_fill_continuous(
-          labels = scales::label_number(accuracy = 0.01)
-        )
+      plot <- plot + scale_fill_continuous(labels = scales::label_number(accuracy = 0.01))
     }
     
     plot
